@@ -20,6 +20,8 @@ Plays some mapper 0 and mapper 1 games.
 ![Super Mario Bros.](img/smb.gif)
 ![Teenage Mutant Ninja Turtle](img/tmnt.gif)
 
+![Source Code](img/smolnes.png)
+
 ## Building
 
 Probably only builds on Linux and macOS.
