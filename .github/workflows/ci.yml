@@ -1,0 +1,57 @@
+name: CI
+
+on:
+  push:
+    paths-ignore:
+      - '.gitignore'
+      - 'img/**'
+      - 'README.md'
+  pull_request:
+    paths-ignore:
+      - '.gitignore'
+      - 'img/**'
+      - 'README.md'
+  workflow_dispatch:
+
+jobs:
+  build-linux:
+    runs-on: ubuntu-${{ matrix.runs-on }}
+    strategy:
+      fail-fast: false
+      matrix:
+        runs-on: [20.04, 22.04]
+    steps:
+      - uses: actions/checkout@v3
+      - name: Install dependencies
+        run: |
+          sudo apt-get -y update
+          sudo apt-get -y install libsdl2-dev
+      - name: Build
+        run: make -j$(nproc)
+  build-macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Install dependencies
+        env:
+          HOMEBREW_NO_ANALYTICS: 1
+        run: brew install sdl2
+      - name: Build
+        run: make -j$(getconf NPROCESSORS_ONLN 2>/dev/null || getconf _NPROCESSORS_ONLN)
+  build-windows:
+    runs-on: windows-latest
+    env:
+      POWERSHELL_TELEMETRY_OPTOUT: 1
+    steps:
+      - uses: actions/checkout@v3
+      - uses: msys2/setup-msys2@v2
+        with:
+          install: |
+            base-devel
+            mingw-w64-x86_64-SDL2
+            mingw-w64-x86_64-toolchain
+#            make
+#            mingw-w64-x86_64-gcc
+      - name: Build
+        shell: msys2 {0}
+        run: make -j $NUMBER_OF_PROCESSORS
