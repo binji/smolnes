@@ -24,7 +24,8 @@ Plays some mapper 0 and mapper 1 games.
 
 ## Building
 
-Probably only builds on Linux and macOS.
+Probably only builds on Linux and macOS. Needs a compiler with the
+[case range extension](https://gcc.gnu.org/onlinedocs/gcc/Case-Ranges.html), so gcc or clang probably.
 
 ```
 $ make
