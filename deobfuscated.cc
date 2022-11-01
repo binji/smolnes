@@ -25,10 +25,10 @@ int rgba[64] = {25356, 34816, 39011, 30854, 24714, 4107,  106,   2311,  2468,
     p_mask[] = // Masks used in SE*/CL* instructions.
     {~1, 0, ~0, 1, ~4, 0, ~0, 4, ~0, 0, ~64, 0, ~8, 0, ~0, 8};
 
-uint8_t *rom, *chrrom,                 // Points to the start of PRG/CHR ROM
-    *prg[2], *chr[2],                  // Points to current PRG/CHR banks
-    A, X, Y, P = 4, S = 253, PCH, PCL, // CPU Registers
-    addr_lo, addr_hi,                  // Current instruction address
+uint8_t *rom, *chrrom,                // Points to the start of PRG/CHR ROM
+    *prg[2], *chr[2],                 // Points to current PRG/CHR banks
+    A, X, Y, P = 4, S = ~2, PCH, PCL, // CPU Registers
+    addr_lo, addr_hi,                 // Current instruction address
     nomem,     // 1 => current instruction doesn't write to memory
     result,    // Temp variable
     val,       // Current instruction value
@@ -52,7 +52,9 @@ uint8_t *rom, *chrrom,                 // Points to the start of PRG/CHR ROM
     keys,                            // Joypad shift register
     mirror,                          // Current mirroring mode
     mmc1_bits, mmc1_data, mmc1_ctrl, // Mapper 1 (MMC1) registers
-    chrbank0, chrbank1, prgbank;     // Current PRG/CHR bank
+    chrbank0, chrbank1, prgbank,     // Current PRG/CHR bank
+    rombuf[1 << 20],                 // Buffer to read ROM file into
+    *key_state;
 
 uint16_t T, V,           // "Loopy" PPU registers
     sum,                 // Sum used for ADC/SBC
@@ -63,13 +65,10 @@ uint16_t T, V,           // "Loopy" PPU registers
     frame_buffer[61440]; // 256x240 pixel frame buffer. Top and bottom 8 rows
                          // are not drawn.
 
-uint8_t const *key_state;
-
 // Add `val` to `addr_hi:addr_lo` and set `cross` to 1 if a page was crossed,
 // or 0 otherwise.
 uint8_t add(uint8_t val) {
-  cross = addr_lo + val > 255;
-  addr_hi += cross;
+  addr_hi += cross = addr_lo + val > 255;
   return addr_lo += val;
 }
 
@@ -105,7 +104,7 @@ uint8_t mem(uint8_t lo, uint8_t hi = 0, uint8_t val = 0, uint8_t write = 0) {
           // Access nametable RAM
           : V < 16128 ? get_nametable_byte(V)
                       // Access palette RAM
-                      : palette_ram[((V & 19) == 16 ? V ^ 16 : V) & 255];
+                      : palette_ram[uint8_t((V & 19) == 16 ? V ^ 16 : V)];
       write ? rom = val : ppubuf = rom;
       V += (ppuctrl & 4 ? 32 : 1) & 16383;
       return tmp;
@@ -129,7 +128,6 @@ uint8_t mem(uint8_t lo, uint8_t hi = 0, uint8_t val = 0, uint8_t write = 0) {
 
       case 6: // $2006 ppuaddr
         T = (W ^= 1) ? T & 255 | val % 64 << 8 : V = T & ~255 | val;
-        return 0;
       }
 
     if (lo == 2) // $2002 ppustatus
@@ -199,19 +197,18 @@ uint8_t read_pc() {
 uint8_t set_nz(uint8_t val) { return P = P & ~130 | val & 128 | !val * 2; }
 
 int main(int, char **argv) {
+  SDL_RWread(SDL_RWFromFile(argv[1], "rb"), rombuf, 1 << 20, 1);
   // Start PRG0 after 16-byte header.
-  prg[0] = rom = (uint8_t *)mmap(0, 1 << 20, PROT_READ, MAP_SHARED,
-                                 open(argv[1], O_RDONLY), 0) +
-                 16;
-  // PRG1 is the last bank. `rom[-12]` is the number of 16k PRG banks.
-  prg[1] = rom + (rom[-12] - 1 << 14);
-  // CHR0 ROM is after all PRG data in the file. `rom[-11]` is the number of 8k
-  // CHR banks. If it is zero, assume the game uses CHR RAM.
-  chr[0] = chrrom = rom[-11] ? prg[1] + 16384 : chrram;
+  prg[0] = rom = rombuf + 16;
+  // PRG1 is the last bank. `rombuf[4]` is the number of 16k PRG banks.
+  prg[1] = rom + (rombuf[4] - 1 << 14);
+  // CHR0 ROM is after all PRG data in the file. `rombuf[5]` is the number of
+  // 8k CHR banks. If it is zero, assume the game uses CHR RAM.
+  chr[0] = chrrom = rombuf[5] ? prg[1] + 16384 : chrram;
   // CHR1 is the last 4k bank.
-  chr[1] = chrrom + rom[-11] * 8192 - 4096;
-  // Bit 0 of `rom[-10]` is 0=>horizontal mirroring, 1=>vertical mirroring.
-  mirror = !(rom[-10] & 1) + 2;
+  chr[1] = chrrom + rombuf[5] * 8192 - 4096;
+  // Bit 0 of `rombuf[6]` is 0=>horizontal mirroring, 1=>vertical mirroring.
+  mirror = !(rombuf[6] & 1) + 2;
 
   // Start at address in reset vector, at $FFFC.
   PCL = mem(~3, ~0);
@@ -222,11 +219,11 @@ int main(int, char **argv) {
   // top or bottom 8 rows. Scaling up by 4x gives 1024x960, but that looks
   // squished because the NES doesn't have square pixels. So shrink it by 7/8.
   auto *renderer = SDL_CreateRenderer(
-      SDL_CreateWindow("smol  nes", 0, 0, 2 << 9, 840, SDL_WINDOW_SHOWN), -1,
+      SDL_CreateWindow("smol  nes", 0, 0, 1024, 840, SDL_WINDOW_SHOWN), -1,
       SDL_RENDERER_PRESENTVSYNC);
   auto *texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_BGR565,
                                     SDL_TEXTUREACCESS_STREAMING, 256, 224);
-  key_state = SDL_GetKeyboardState(0);
+  key_state = (uint8_t*)SDL_GetKeyboardState(0);
 
   for (;;) {
     cycles = nomem = 0;
