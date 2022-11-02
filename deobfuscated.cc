@@ -26,7 +26,7 @@ int rgba[64] = {25356, 34816, 39011, 30854, 24714, 4107,  106,   2311,  2468,
     {~1, 0, ~0, 1, ~4, 0, ~0, 4, ~0, 0, ~64, 0, ~8, 0, ~0, 8};
 
 uint8_t *rom, *chrrom,                // Points to the start of PRG/CHR ROM
-    *prg[2], *chr[2],                 // Points to current PRG/CHR banks
+    prg[2], chr[2],                   // Current PRG/CHR banks
     A, X, Y, P = 4, S = ~2, PCH, PCL, // CPU Registers
     addr_lo, addr_hi,                 // Current instruction address
     nomem,     // 1 => current instruction doesn't write to memory
@@ -73,7 +73,9 @@ uint8_t add(uint8_t val) {
 }
 
 // Read a byte from CHR ROM or CHR RAM.
-uint8_t &get_chr_byte(uint16_t a) { return chr[a >> 12][a & 4095]; }
+uint8_t &get_chr_byte(uint16_t a) {
+  return chrrom[chr[a >> 12] << 12 | a & 4095];
+}
 
 // Read a byte from nametable RAM.
 uint8_t &get_nametable_byte(uint16_t a) {
@@ -131,7 +133,7 @@ uint8_t mem(uint8_t lo, uint8_t hi = 0, uint8_t val = 0, uint8_t write = 0) {
       }
 
     if (lo == 2) // $2002 ppustatus
-      return tmp = ppustatus & 224, ppustatus &= ~80, W = 0, tmp;
+      return tmp = ppustatus & 224, ppustatus &= 127, W = 0, tmp;
 
     break;
 
@@ -140,10 +142,11 @@ uint8_t mem(uint8_t lo, uint8_t hi = 0, uint8_t val = 0, uint8_t write = 0) {
       for (sum = 256; sum--;)
         oam[sum] = mem(sum, val);
     else if (lo == 22) // $4016 Joypad 1
-      return write ? keys = key_state[SDL_SCANCODE_RIGHT] * 128 +
-                            key_state[SDL_SCANCODE_LEFT] * 64 +
-                            key_state[SDL_SCANCODE_DOWN] * 32 +
-                            key_state[SDL_SCANCODE_UP] * 16 +
+      return write ? keys = (key_state[SDL_SCANCODE_RIGHT] * 8 +
+                             key_state[SDL_SCANCODE_LEFT] * 4 +
+                             key_state[SDL_SCANCODE_DOWN] * 2 +
+                             key_state[SDL_SCANCODE_UP]) *
+                                16 +
                             key_state[SDL_SCANCODE_RETURN] * 8 +
                             key_state[SDL_SCANCODE_TAB] * 4 +
                             key_state[SDL_SCANCODE_Z] * 2 +
@@ -157,30 +160,32 @@ uint8_t mem(uint8_t lo, uint8_t hi = 0, uint8_t val = 0, uint8_t write = 0) {
   case 8 ... 15: // $8000...$ffff ROM
     // handle mmc1 writes
     if (write)
-      if (val & 128)
-        mmc1_bits = 5, mmc1_data = 0, mmc1_ctrl |= 12;
-      else if (mmc1_data = mmc1_data / 2 | val << 4 & 16, !--mmc1_bits)
-        mmc1_bits = 5, tmp = a >> 13,
-        (tmp == 4 ? mirror = mmc1_data & 3, mmc1_ctrl
-     : tmp == 5   ? chrbank0
-     : tmp == 6   ? chrbank1
-                  : prgbank) = mmc1_data,
+      switch (rombuf[6] >> 4) {
+      case 2: // mapper 2
+        *prg = val & 31;
+        break;
 
-        // Update CHR pointers.
-        chr[0] = chrrom + (chrbank0 & ~!(mmc1_ctrl & 16)) * 4096,
-        chr[1] = chrrom + (mmc1_ctrl & 16 ? chrbank1 : chrbank0 | 1) * 4096,
+      case 1: // mapper 1
+        if (val & 128) {
+          mmc1_bits = 5, mmc1_data = 0, mmc1_ctrl |= 12;
+        } else if (mmc1_data = mmc1_data / 2 | val << 4 & 16, !--mmc1_bits) {
+          mmc1_bits = 5, tmp = a >> 13;
+          (tmp == 4 ? mirror = mmc1_data & 3, mmc1_ctrl
+       : tmp == 5   ? chrbank0
+       : tmp == 6   ? chrbank1
+                    : prgbank) = mmc1_data;
 
-        // Update PRG pointers.
-        tmp = mmc1_ctrl / 4 & 3,
-        prg[0] = rom + ((tmp == 2   ? 0
-                         : tmp == 3 ? prgbank
-                                    : prgbank & ~1)
-                        << 14),
-        prg[1] = rom + ((tmp == 2   ? prgbank
-                         : tmp == 3 ? rom[-12] - 1
-                                    : prgbank | 1)
-                        << 14);
-    return prg[(a >> 14) - 2][a & 16383];
+          // Update CHR banks.
+          *chr = chrbank0 & ~!(mmc1_ctrl & 16);
+          chr[1] = mmc1_ctrl & 16 ? chrbank1 : chrbank0 | 1;
+
+          // Update PRG banks.
+          tmp = mmc1_ctrl / 4 & 3;
+          *prg = tmp == 2 ? 0 : tmp == 3 ? prgbank : prgbank & ~1;
+          prg[1] = tmp == 2 ? prgbank : tmp == 3 ? rombuf[4] - 1 : prgbank | 1;
+        }
+      }
+    return rom[prg[(a >> 14) - 2] << 14 | a & 16383];
   }
 
   return ~0;
@@ -199,14 +204,14 @@ uint8_t set_nz(uint8_t val) { return P = P & ~130 | val & 128 | !val * 2; }
 int main(int, char **argv) {
   SDL_RWread(SDL_RWFromFile(argv[1], "rb"), rombuf, 1 << 20, 1);
   // Start PRG0 after 16-byte header.
-  prg[0] = rom = rombuf + 16;
+  rom = rombuf + 16;
   // PRG1 is the last bank. `rombuf[4]` is the number of 16k PRG banks.
-  prg[1] = rom + (rombuf[4] - 1 << 14);
+  prg[1] = rombuf[4] - 1;
   // CHR0 ROM is after all PRG data in the file. `rombuf[5]` is the number of
   // 8k CHR banks. If it is zero, assume the game uses CHR RAM.
-  chr[0] = chrrom = rombuf[5] ? prg[1] + 16384 : chrram;
+  chrrom = rombuf[5] ? rom + ((prg[1] + 1) << 14) : chrram;
   // CHR1 is the last 4k bank.
-  chr[1] = chrrom + rombuf[5] * 8192 - 4096;
+  chr[1] = (rombuf[5] ? rombuf[5] : 1) * 2 - 1;
   // Bit 0 of `rombuf[6]` is 0=>horizontal mirroring, 1=>vertical mirroring.
   mirror = !(rombuf[6] & 1) + 2;
 
@@ -219,7 +224,7 @@ int main(int, char **argv) {
   // top or bottom 8 rows. Scaling up by 4x gives 1024x960, but that looks
   // squished because the NES doesn't have square pixels. So shrink it by 7/8.
   auto *renderer = SDL_CreateRenderer(
-      SDL_CreateWindow("smol  nes", 0, 0, 1024, 840, SDL_WINDOW_SHOWN), -1,
+      SDL_CreateWindow("smolnes", 0, 0, 1024, 840, SDL_WINDOW_SHOWN), -1,
       SDL_RENDERER_PRESENTVSYNC);
   auto *texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_BGR565,
                                     SDL_TEXTUREACCESS_STREAMING, 256, 224);

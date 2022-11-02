@@ -1,8 +1,8 @@
 #include                                                                          <SDL2/SDL.h> /************************************************************/
 #include                                                                             <cstdint> /*             SMOLNES by Ben Smith (Oct 2022)              */
 #define                                                                                 G goto /* -------------------------------------------------------- */
-#define                                                                               B break; /*   A NES emulator that can only play a few mapper 0 and   */
-#define                                                                               Q return /*   mapper 1 games. Requires gcc/clang and Linux/macOS.    */
+#define                                                                               B break; /*   A NES emulator that can only play a few mapper 0/1/2   */
+#define                                                                               Q return /*   games. Requires gcc/clang and Linux/macOS.             */
 #define                                                                               Z switch /*                                                          */
 #define                                                                               W B case /*   $ cc smolnes.cc -O2 -lSDL2 -o smolnes                  */
 #define                                                                            PL m(++S,1) /*   $ smolnes <rom.nes>                                    */
@@ -11,19 +11,19 @@
 #define                                                                    PH(x) m(S--,1,x,1); /************************************************************/
 using u=uint8_t;using U=uint16_t;int p4[64]={25356,34816,39011,30854,24714,4107,106,2311,2468,2561,4642,6592,20832,0,0,0,44373,49761,55593,51341,43186,18675,
 434,654,4939,5058,3074,19362,37667,0,0,0,~0,~819,64497,64342,62331,43932,23612,9465,1429,1550,20075,36358,52713,16904,0,0,~0,~328,~422,~452,~482,58911,50814,
-42620,40667,40729,48951,53078,61238,44405},y,_,PM[]={~1,0,~0,1,~4,0,~0,4,~0,0,~64,0,~8,0,~0,8};u*q,*K,*J[2],*L[2],A,X,Y,P=4,S=~2,h,l,i,j,z,r,v,x,t,t2,pm,p,g,
-pb,pw,I,o,N,nt,pl,ph,vr[2048],pr[64],ra[8192],cr[8192],PR[8192],M[256],bm[]={128,64,1,2},kz,e,mb,D,E,c0,c1,F,bu[1<<20],*k;U T,V,f,d,at,sh,sl,c,fb[61440];u ad
-(u v){j+=x=i+v>255;Q i+=v;}u&H(U a){Q L[a>>12][a&4095];}u&NT(U a){U f=1024;Q vr[!e?a&f-1:e==1?a%f+f:e==2?a&2047:a/2&f|a&f-1];}u m(u l,u h=0,u v=0,u w=0){U a=
-h<<8|l;Z(h>>                                                                                                                                     4){W 0 ...1:
-Q w?ra[a]=v:  ra[a];W 2 ...3:l&=7;if(l==7){t=pb;u&q=V<8192?!w|K==cr?H(V):t2:V<16128?NT(V):pr[u((V&19)==16?V^16:V)];w?q=v:pb=q;V=V+(p&4?32:1)&3*  5461;Q t;}if
-(w)Z(l){W 0:  p=v;T=T&62463|v%4<<10;W 1:pm=v;W 5:T=(pw^=1)?I=v&7,T&~31|v/8:T&35871|v%8<<12|(v&248)*4;W 6:T=(pw^=1)?u(T)|v%64<<8:V=T&~255|v;}if(  l==2)Q t=g&4
-*56,pw=0,g&=  ~80,t;W 4:if(w&&l==20)for(f=256;f--;)M[f]=m(f,v);else if(l==22)Q w?kz=(k[79]*8+k[80]*4+k[81]*2+k[82])*16+k[40]*8+k[43]*4+k[29]*2+  k[27]:(t=kz&
-1,kz/=2,t);Q  0;W 6 ...7:Q w?PR[ a&8191]=v:PR[a&8191];W                                       8 ...15:if(w)if(v&128)mb=5,D =0,E|=12;else if(D=D  /2|v<<4&16,!
---mb)mb=5,t=  a>>13,(t==4?e=D&3,E:t==5?c0:t==6?c1:F)=D,                                       *L=K+(c0&~!(E&16))*4096,L[1]=K+4096*(E&16?c1:c0|1  ),t=E/4&3,*J
-=q+((t==2?0:  t==3?F:F&~1)<<14),J[1]=q+((t==2?F:t==3?bu[4]-1:F|1)<<14);Q J[(a>>14)-2][a&16383];}Q~0;}u R(){v=m(l,h);Q!++l?++h:0,v;}u n(u v){Q P  =P&~130|128&
-v|!v*2;}int   main(int,char**F){SDL_RWread(SDL_RWFromFile(F[1],"rb"),bu,1<<20,1);*J=q=bu+16;J[1]=q+(bu[4]-1<<14);*L=K=bu[5]?16384+J[1]:cr;L[1]=  K+bu[5]*8192
--4096;e=!(bu  [6]&1)+2;l=             m(~3,~0);h=m(~2,~                                       0);SDL_Init(32);auto*D=SD(Create,Renderer)(SD(Cr,  eateWindow)(
-"smolnes",0,  0,1024,840,  4),-1,4);  auto*E=SD(Create,                                       Texture)(D,357896194,1,256,224);k=(u*)SD(GetKeyb,  oardState)(0
+42620,40667,40729,48951,53078,61238,44405},y,_,PM[]={~1,0,~0,1,~4,0,~0,4,~0,0,~64,0,~8,0,~0,8};u*q,*K,J[2],L[2],A,X,Y,P=4,S=~2,h,l,i,j,z,r,v,x,t,t2,pm,p,g,pb
+,pw,I,o,N,nt,pl,ph,vr[2048],pr[64],ra[8192],cr[8192],PR[8192],M[256],bm[]={128,64,1,2},kz,e,mb,D,E,c0,c1,F,bu[1<<20],*k;U T,V,f,d,at,sh,sl,c,fb[61440];u ad(u
+v){j+=x=i+v>255;Q i+=v;}u&H(U a){Q K[L[a>>12]<<12|a&4095];}u&NT(U a){U f=1024;Q vr[!e?a&f-1:e==1?a%f+f:e==2?a&2047:a/2&f|a&f-1];}u m(u l,u h=0,u v=0,u w=0){U
+a=h<<8|l;Z(h                                                                                                                                     >>4){W 0 ...
+1:Q w?ra[a]=  v:ra[a];W 2 ...3:l&=7;if(l==7){t=pb;u&q=V<8192?!w|K==cr?H(V):t2:V<16128?NT(V):pr[u((V&19)==16?V^16:V)];w?q=v:pb=q;V=V+(p&4?32:1)&  3*5461;Q t;}
+;if(w)Z(l){W  0:p=v;T=T&62463|v%4<<10;W 1:pm=v;W 5:T=(pw^=1)?I=v&7,T&~31|v/8:T&35871|v%8<<12|(v&248)*4;W 6:T=(pw^=1)?u(T)|v%64<<8:V=T&~255|v;;}  if(l==2)Q t=
+g&4*56,pw=0,  g&=127,t;W 4:if(w&&l==20)for(f=256;f--;)M[f]=m(f,v);else if(l==22)Q w?kz=(k[79]*8+k[80]*4+k[81]*2+k[82])*16+k[40]*8+k[43]*4+k[29]  *2+k[27]:(t=
+kz&1,kz/=2,t  );Q 0;W 6 ...7:Q w?PR[a&8191]=v:PR[a&8191                                       ];W 8 ...15:if(w)Z(bu[6]>>4){W 2:*J=v&31;W 1:if(v  &128)mb=5,D=
+0,E|=12;else  if(D=D/2|v<<4&16,!--mb)mb=5,t=a>>13,(t==4                                       ?e=D&3,E:t==5?c0:t==6?c1:F)=D,*L=c0&~!(E&16),L[1]  =E&16?c1:c0|
+1,t=E/4&3,*J  =t==2?0:t==3?F:F&~1,J[1]=t==2?F:t==3?bu[4]-1:F|1;}Q q[J[(a>>14)-2]<<14|a&16383];}Q~0;}u R(){v=m(l,h);Q!++l?++h:0,v;}u n(u v){Q P=  P&~130|128&v
+|!v*2;;;}int  main(int,char**F){SDL_RWread(SDL_RWFromFile(F[1],"rb"),bu,1<<20,1);q=bu+16;J[1]=bu[4]-1;K=bu[5]?q+((J[1]+1)<<14):cr;L[1]=(!bu[5]?  1:bu[5])*2-1
+;e=!(bu[6]&1  )+2;l=m(~3,             ~0);h=m(~2,~0);SD                                       (In,it)(32);auto*D=SDL_CreateRenderer(SD(CreateW,  indow)("smo"
+"l" "nes",0,  0,1024,840,  4),-1,4);  auto*E=SD(Create,                                       Texture)(D,357896194,1,256,224);k=(u*)SD(GetKeyb,  oardState)(0
 );for(;;){c=  z=0;if(N)G   N;Z((o=R(  ))&31){W 0:if(o&128){R();z=1;G n;}Z(o>>5){W 0:!++l?++h:0;N:PH(h)PH(l)PH(P|32)l=m(~1-N*4,~0);h=m(~0-N*4,~0  );c++;N=00;W
 1:2345*6789+  0;r=R();PH(  h)PH(l)h=  R();l=r;W 2:P=PL&~32;l=PL;h=PL;W 3:l=PL;h=PL;!++l?++h:0;B}c+=4;W 16:R();if(!(P&bm[o>>6&3])^(o>>5)&1)(x=l+  (int8_t)v>>8
 )?h+=x,c++:0  ,c++         ,l+=(int)          v;O(8)Z(o                                       >>=4){W 0:PH(P|48)c++;W 2:P=PL&~16;c+=2;W 4:PH(A)  c++;W 6:n(A=
