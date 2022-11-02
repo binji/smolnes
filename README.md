@@ -4,7 +4,7 @@ A NES emulator in ~5000 significant bytes of c++.
 
 ## Features
 
-Plays some mapper 0 and mapper 1 games.
+Plays some mapper 0/1/2 games.
 
 ## Screenshots
 
@@ -19,6 +19,12 @@ Plays some mapper 0 and mapper 1 games.
 ![Rad Racer](img/rr.gif)
 ![Super Mario Bros.](img/smb.gif)
 ![Teenage Mutant Ninja Turtle](img/tmnt.gif)
+![Contra](img/contra.gif)
+![Goonies 2](img/g2.gif)
+![Castlevania](img/cv.gif)
+![DuckTales](img/dt.gif)
+![Alwa's Awakening](img/alwa.gif)
+![Witch n' Wiz](img/wnw.gif)
 
 ![Source Code](img/smolnes.png)
 
