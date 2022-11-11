@@ -25,6 +25,9 @@ Plays some mapper 0/1/2 games.
 ![DuckTales](img/dt.gif)
 ![Alwa's Awakening](img/alwa.gif)
 ![Witch n' Wiz](img/wnw.gif)
+![Battletoads](img/bt.gif)
+![Wizard's and Warriors II](img/ww2.gif)
+![Gradius](img/grad.gif)
 
 ![Source Code](img/smolnes.png)
 

@@ -1,13 +1,20 @@
 .PHONY: all clean
 all: smolnes deobfuscated
 
-WARN=-Wno-parentheses -Wno-misleading-indentation -Wno-bool-operation -Wno-unused-value
+WARN=-Wall \
+     -Wno-parentheses \
+		 -Wno-misleading-indentation \
+		 -Wno-bool-operation \
+		 -Wno-discarded-qualifiers \
+		 -Wno-incompatible-pointer-types-discards-qualifiers \
+		 -Wno-c2x-extensions \
+		 -Wno-unknown-warning-option
 
-smolnes: smolnes.cc
-	$(CC) -O2 -Wall -o $@ $< -lSDL2 -g ${WARN}
+smolnes: smolnes.c
+	$(CC) -O2 -o $@ $< -lSDL2 -g ${WARN}
 
-deobfuscated: deobfuscated.cc
-	$(CC) -O2 -Wall -o $@ $< -lSDL2 -g ${WARN}
+deobfuscated: deobfuscated.c
+	$(CC) -O2 -o $@ $< -lSDL2 -g ${WARN}
 
 clean:
 	rm -f smolnes deobfuscated

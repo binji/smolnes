@@ -1,7 +1,7 @@
 #include <SDL2/SDL.h>
-#include <cstdint>
+#include <stdint.h>
 
-#define PULL mem(++S, 1)
+#define PULL mem(++S, 1, 0, 0)
 #define PUSH(x) mem(S--, 1, x, 1);
 
 #define OP16(x)                                                                \
@@ -17,10 +17,8 @@ int rgba[64] = {25356, 34816, 39011, 30854, 24714, 4107,  106,   2311,  2468,
                 62331, 43932, 23612, 9465,  1429,  1550,  20075, 36358, 52713,
                 16904, 0,     0,     ~0,    ~328,  ~422,  ~452,  ~482,  58911,
                 50814, 42620, 40667, 40729, 48951, 53078, 61238, 44405},
-    scany,     // Scanline Y
-    shift_at,  // Attribute shift register
-    p_mask[] = // Masks used in SE*/CL* instructions.
-    {~1, 0, ~0, 1, ~4, 0, ~0, 4, ~0, 0, ~64, 0, ~8, 0, ~0, 8};
+    scany,    // Scanline Y
+    shift_at; // Attribute shift register
 
 uint8_t *rom, *chrrom,                // Points to the start of PRG/CHR ROM
     prg[2], chr[2],                   // Current PRG/CHR banks
@@ -31,26 +29,28 @@ uint8_t *rom, *chrrom,                // Points to the start of PRG/CHR ROM
     val,       // Current instruction value
     cross,     // 1 => page crossing occurred
     tmp, tmp2, // Temp variables
-    ppumask, ppuctrl, ppustatus,     // PPU registers
-    ppubuf,                          // PPU buffered reads
-    W,                               // Write toggle PPU register
-    fine_x,                          // X fine scroll offset, 0..7
-    opcode,                          // Current instruction opcode
-    nmi,                             // 1 => NMI occurred
-    ntb,                             // Nametable byte
-    ptb_lo, ptb_hi,                  // Pattern table low/high byte
-    vram[2048],                      // Nametable RAM
-    palette_ram[64],                 // Palette RAM
-    ram[8192],                       // CPU RAM
-    chrram[8192],                    // CHR RAM (only used for some games)
-    prgram[8192],                    // PRG RAM (only used for some games)
-    oam[256],                        // Object Attribute Memory (sprite RAM)
-    br_mask[] = {128, 64, 1, 2},     // Masks used in branch instructions
-    keys,                            // Joypad shift register
-    mirror,                          // Current mirroring mode
-    mmc1_bits, mmc1_data, mmc1_ctrl, // Mapper 1 (MMC1) registers
-    chrbank0, chrbank1, prgbank,     // Current PRG/CHR bank
-    rombuf[1 << 20],                 // Buffer to read ROM file into
+    ppumask, ppuctrl, ppustatus, // PPU registers
+    ppubuf,                      // PPU buffered reads
+    W,                           // Write toggle PPU register
+    fine_x,                      // X fine scroll offset, 0..7
+    opcode,                      // Current instruction opcode
+    nmi,                         // 1 => NMI occurred
+    ntb,                         // Nametable byte
+    ptb_lo, ptb_hi,              // Pattern table low/high byte
+    vram[2048],                  // Nametable RAM
+    palette_ram[64],             // Palette RAM
+    ram[8192],                   // CPU RAM
+    chrram[8192],                // CHR RAM (only used for some games)
+    prgram[8192],                // PRG RAM (only used for some games)
+    oam[256],                    // Object Attribute Memory (sprite RAM)
+    mask[] = {128, 64, 1, 2,     // Masks used in branch instructions
+              1,   0,  0, 1, 4, 0, 0, 4, 0,
+              0,   64, 0, 8, 0, 0, 8}, // Masks used in SE*/CL* instructions.
+    keys,                              // Joypad shift register
+    mirror,                            // Current mirroring mode
+    mmc1_bits, mmc1_data, mmc1_ctrl,   // Mapper 1 (MMC1) registers
+    chrbank0, chrbank1, prgbank,       // Current PRG/CHR bank
+    rombuf[1024 * 1024],               // Buffer to read ROM file into
     *key_state;
 
 uint16_t T, V,           // "Loopy" PPU registers
@@ -62,29 +62,22 @@ uint16_t T, V,           // "Loopy" PPU registers
     frame_buffer[61440]; // 256x240 pixel frame buffer. Top and bottom 8 rows
                          // are not drawn.
 
-// Add `val` to `addr_hi:addr_lo` and set `cross` to 1 if a page was crossed,
-// or 0 otherwise.
-uint8_t add(uint8_t val) {
-  addr_hi += cross = addr_lo + val > 255;
-  return addr_lo += val;
-}
-
 // Read a byte from CHR ROM or CHR RAM.
-uint8_t &get_chr_byte(uint16_t a) {
-  return chrrom[chr[a >> 12] << 12 | a & 4095];
+uint8_t *get_chr_byte(uint16_t a) {
+  return &chrrom[chr[a >> 12] << 12 | a & 4095];
 }
 
 // Read a byte from nametable RAM.
-uint8_t &get_nametable_byte(uint16_t a) {
-  return vram[!mirror       ? a & 1023                  // single bank 0
-              : mirror == 1 ? a % 1024 + 1024           // single bank 1
-              : mirror == 2 ? a & 2047                  // vertical mirroring
-                            : a / 2 & 1024 | a & 1023]; // horizontal mirroring
+uint8_t *get_nametable_byte(uint16_t a) {
+  return &vram[!mirror       ? a % 1024                  // single bank 0
+               : mirror == 1 ? a % 1024 + 1024           // single bank 1
+               : mirror == 2 ? a & 2047                  // vertical mirroring
+                             : a / 2 & 1024 | a % 1024]; // horizontal mirroring
 }
 
 // If `write` is non-zero, writes `val` to the address `hi:lo`, otherwise reads
 // a value from the address `hi:lo`.
-uint8_t mem(uint8_t lo, uint8_t hi = 0, uint8_t val = 0, uint8_t write = 0) {
+uint8_t mem(uint8_t lo, uint8_t hi, uint8_t val, uint8_t write) {
   uint16_t a = hi << 8 | lo;
 
   switch (hi >> 4) {
@@ -97,15 +90,16 @@ uint8_t mem(uint8_t lo, uint8_t hi = 0, uint8_t val = 0, uint8_t write = 0) {
     // read/write $2007
     if (lo == 7) {
       tmp = ppubuf;
-      uint8_t &rom =
+      uint8_t *rom =
           // Access CHR ROM or CHR RAM
-          V < 8192 ? !write || chrrom == chrram ? get_chr_byte(V) : tmp2
+          V < 8192 ? !write || chrrom == chrram ? get_chr_byte(V) : &tmp2
           // Access nametable RAM
           : V < 16128 ? get_nametable_byte(V)
                       // Access palette RAM
-                      : palette_ram[uint8_t((V & 19) == 16 ? V ^ 16 : V)];
-      write ? rom = val : ppubuf = rom;
-      V += (ppuctrl & 4 ? 32 : 1) & 16383;
+                      : palette_ram + (uint8_t)((V & 19) == 16 ? V ^ 16 : V);
+      write ? *rom = val : (ppubuf = *rom);
+      V += ppuctrl & 4 ? 32 : 1;
+      V %= 16384;
       return tmp;
     }
 
@@ -126,7 +120,7 @@ uint8_t mem(uint8_t lo, uint8_t hi = 0, uint8_t val = 0, uint8_t write = 0) {
         break;
 
       case 6: // $2006 ppuaddr
-        T = (W ^= 1) ? T & 255 | val % 64 << 8 : V = T & ~255 | val;
+        T = (W ^= 1) ? T & 255 | val % 64 << 8 : (V = T & ~255 | val);
       }
 
     if (lo == 2) // $2002 ppustatus
@@ -137,19 +131,19 @@ uint8_t mem(uint8_t lo, uint8_t hi = 0, uint8_t val = 0, uint8_t write = 0) {
   case 4:
     if (write && lo == 20) // $4014 OAM DMA
       for (sum = 256; sum--;)
-        oam[sum] = mem(sum, val);
-    else if (lo == 22) // $4016 Joypad 1
-      return write ? keys = (key_state[SDL_SCANCODE_RIGHT] * 8 +
-                             key_state[SDL_SCANCODE_LEFT] * 4 +
-                             key_state[SDL_SCANCODE_DOWN] * 2 +
-                             key_state[SDL_SCANCODE_UP]) *
-                                16 +
-                            key_state[SDL_SCANCODE_RETURN] * 8 +
-                            key_state[SDL_SCANCODE_TAB] * 4 +
-                            key_state[SDL_SCANCODE_Z] * 2 +
-                            key_state[SDL_SCANCODE_X]
-                   : (tmp = keys & 1, keys /= 2, tmp);
-    return 0;
+        oam[sum] = mem(sum, val, 0, 0);
+    // $4016 Joypad 1
+    return (lo == 22) ? write ? keys = (key_state[SDL_SCANCODE_RIGHT] * 8 +
+                                        key_state[SDL_SCANCODE_LEFT] * 4 +
+                                        key_state[SDL_SCANCODE_DOWN] * 2 +
+                                        key_state[SDL_SCANCODE_UP]) *
+                                           16 +
+                                       key_state[SDL_SCANCODE_RETURN] * 8 +
+                                       key_state[SDL_SCANCODE_TAB] * 4 +
+                                       key_state[SDL_SCANCODE_Z] * 2 +
+                                       key_state[SDL_SCANCODE_X]
+                              : (tmp = keys & 1, keys /= 2, tmp)
+                      : 0;
 
   case 6 ... 7: // $6000...$7fff PRG RAM
     return write ? prgram[a & 8191] = val : prgram[a & 8191];
@@ -158,6 +152,17 @@ uint8_t mem(uint8_t lo, uint8_t hi = 0, uint8_t val = 0, uint8_t write = 0) {
     // handle mmc1 writes
     if (write)
       switch (rombuf[6] >> 4) {
+      case 7: // mapper 7
+        mirror = !(val / 16);
+        *prg = val = val % 8 * 2;
+        prg[1] = val + 1;
+        break;
+
+      case 3: // mapper 3
+        *chr = val = val % 4 * 2;
+        chr[1] = val + 1;
+        break;
+
       case 2: // mapper 2
         *prg = val & 31;
         break;
@@ -167,10 +172,10 @@ uint8_t mem(uint8_t lo, uint8_t hi = 0, uint8_t val = 0, uint8_t write = 0) {
           mmc1_bits = 5, mmc1_data = 0, mmc1_ctrl |= 12;
         } else if (mmc1_data = mmc1_data / 2 | val << 4 & 16, !--mmc1_bits) {
           mmc1_bits = 5, tmp = a >> 13;
-          (tmp == 4 ? mirror = mmc1_data & 3, mmc1_ctrl
-       : tmp == 5   ? chrbank0
-       : tmp == 6   ? chrbank1
-                    : prgbank) = mmc1_data;
+          *(tmp == 4 ? mirror = mmc1_data & 3, &mmc1_ctrl
+        : tmp == 5   ? &chrbank0
+        : tmp == 6   ? &chrbank1
+                     : &prgbank) = mmc1_data;
 
           // Update CHR banks.
           *chr = chrbank0 & ~!(mmc1_ctrl & 16);
@@ -190,7 +195,7 @@ uint8_t mem(uint8_t lo, uint8_t hi = 0, uint8_t val = 0, uint8_t write = 0) {
 
 // Read a byte at address `PCH:PCL` and increment PC.
 uint8_t read_pc() {
-  val = mem(PCL, PCH);
+  val = mem(PCL, PCH, 0, 0);
   !++PCL ? ++PCH : 0;
   return val;
 }
@@ -199,7 +204,7 @@ uint8_t read_pc() {
 uint8_t set_nz(uint8_t val) { return P = P & ~130 | val & 128 | !val * 2; }
 
 int main(int, char **argv) {
-  SDL_RWread(SDL_RWFromFile(argv[1], "rb"), rombuf, 1 << 20, 1);
+  SDL_RWread(SDL_RWFromFile(argv[1], "rb"), rombuf, 1024 * 1024, 1);
   // Start PRG0 after 16-byte header.
   rom = rombuf + 16;
   // PRG1 is the last bank. `rombuf[4]` is the number of 16k PRG banks.
@@ -213,17 +218,17 @@ int main(int, char **argv) {
   mirror = !(rombuf[6] & 1) + 2;
 
   // Start at address in reset vector, at $FFFC.
-  PCL = mem(~3, ~0);
-  PCH = mem(~2, ~0);
+  PCL = mem(~3, ~0, 0, 0);
+  PCH = mem(~2, ~0, 0, 0);
 
   SDL_Init(SDL_INIT_VIDEO);
   // Create window 1024x840. The framebuffer is 256x240, but we don't draw the
   // top or bottom 8 rows. Scaling up by 4x gives 1024x960, but that looks
   // squished because the NES doesn't have square pixels. So shrink it by 7/8.
-  auto *renderer = SDL_CreateRenderer(
+  void *renderer = SDL_CreateRenderer(
       SDL_CreateWindow("smolnes", 0, 0, 1024, 840, SDL_WINDOW_SHOWN), -1,
       SDL_RENDERER_PRESENTVSYNC);
-  auto *texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_BGR565,
+  void *texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_BGR565,
                                     SDL_TEXTUREACCESS_STREAMING, 256, 224);
   key_state = (uint8_t*)SDL_GetKeyboardState(0);
 
@@ -248,8 +253,8 @@ int main(int, char **argv) {
         PUSH(PCL)
         PUSH(P | 32)
         // BRK vector is $ffff, NMI vector is $fffa
-        PCL = mem(~1 - nmi * 4, ~0);
-        PCH = mem(~0 - nmi * 4, ~0);
+        PCL = mem(~1 - nmi * 4, ~0, 0, 0);
+        PCH = mem(~0 - nmi * 4, ~0, 0, 0);
         cycles++;
         nmi = 0;
         break;
@@ -280,9 +285,11 @@ int main(int, char **argv) {
 
     case 16: // BPL, BMI, BVC, BVS, BCC, BCS, BNE, BEQ
       read_pc();
-      if (!(P & br_mask[opcode >> 6 & 3]) ^ (opcode >> 5) & 1)
-        (cross = PCL + (int8_t)val >> 8) ? PCH += cross, cycles++ : 0, cycles++,
-            PCL += (int)val;
+      if (!(P & mask[opcode >> 6 & 3]) ^ opcode / 32 & 1) {
+        if (cross = PCL + (int8_t)val >> 8)
+          PCH += cross, cycles++;
+        cycles++, PCL += (int)val;
+      }
 
     OP16(8)
       switch (opcode >>= 4) {
@@ -327,7 +334,7 @@ int main(int, char **argv) {
         break;
 
       default: // CLC, SEC, CLI, SEI, CLV, CLD, SED
-        P = P & p_mask[opcode - 1] | p_mask[opcode];
+        P = P & ~mask[opcode + 3] | mask[opcode + 4];
         break;
       }
 
@@ -366,8 +373,8 @@ int main(int, char **argv) {
     case 1: // X-indexed, indirect
       read_pc();
       val += X;
-      addr_lo = mem(val);
-      addr_hi = mem(val + 1);
+      addr_lo = mem(val, 0, 0, 0);
+      addr_hi = mem(val + 1, 0, 0, 0);
       cycles += 4;
       goto opcode;
 
@@ -389,11 +396,12 @@ int main(int, char **argv) {
       goto opcode;
 
     case 17: // Zeropage, Y-indexed
-      addr_lo = mem(read_pc());
-      addr_hi = mem(val + 1);
-      add(Y);
-      cycles += 3 + (opcode == 145 || cross); // STA always uses extra cycle.
-      goto opcode;
+      addr_lo = mem(read_pc(), 0, 0, 0);
+      addr_hi = mem(val + 1, 0, 0, 0);
+      val = Y;
+      tmp = opcode == 145; // STA always uses extra cycle.
+      cycles++;
+      goto cross;
 
     case 20 ... 22: // Zeropage, X-indexed
       addr_lo = read_pc() + ((opcode & 214) == 150 ? Y : X); // LDX/STX use Y
@@ -404,25 +412,29 @@ int main(int, char **argv) {
     case 25: // Absolute, Y-indexed.
       addr_lo = read_pc();
       addr_hi = read_pc();
-      add(Y);
-      cycles += 2 + (opcode == 153 || cross); // STA always uses extra cycle.
-      goto opcode;
+      val = Y;
+      tmp = opcode == 153; // STA always uses extra cycle.
+      goto cross;
 
     case 28 ... 30: // Absolute, X-indexed.
       addr_lo = read_pc();
       addr_hi = read_pc();
-      add(opcode == 190 ? Y : X); // LDX uses Y
-      cycles += 2 +
-                // STA always uses extra cycle.
-                (opcode == 157 ||
-                 // ASL/ROL/LSR/ROR/INC/DEC all uses extra cycle.
-                 opcode % 16 == 14 && opcode != 190 || cross);
+      val = opcode == 190 ? Y : X; // LDX uses Y
+      tmp = opcode == 157 ||      // STA always uses extra cycle.
+                              // ASL/ROL/LSR/ROR/INC/DEC all uses extra cycle.
+             opcode % 16 == 14 && opcode != 190;
+      // fallthrough
+    cross:
+      addr_hi += cross = addr_lo + val > 255;
+      addr_lo += val;
+      cycles += 2 + tmp | cross;
       // fallthrough
 
     opcode:
       // Read from the given address into `val` for convenience below, except
       // for the STA/STX/STY instructions, and JMP.
-      (opcode & 224) != 128 &&opcode != 76 ? val = mem(addr_lo, addr_hi) : 0;
+      (opcode & 224) != 128 &&opcode != 76 ? val = mem(addr_lo, addr_hi, 0, 0)
+                                           : 0;
 
     nomemop:
       switch (opcode & 243) {
@@ -432,22 +444,22 @@ int main(int, char **argv) {
 
       OP16(225) // SBC
         val = ~val;
-        goto a;
+        goto add;
 
       OP16(97) // ADC
-      a:
+      add:
         sum = A + val + (P & 1);
         P = P & ~65 | sum > 255 | (~(A ^ val) & (val ^ sum) & 128) / 2;
         set_nz(A = sum);
 
       OP16(2) // ASL
         result = val * 2;
-        P = P & ~1 | val >> 7;
+        P = P & ~1 | val / 128;
         goto memop;
 
       OP16(34) // ROL
         result = val * 2 | P & 1;
-        P = P & ~1 | val >> 7;
+        P = P & ~1 | val / 128;
         goto memop;
 
       OP16(66) // LSR
@@ -486,7 +498,7 @@ int main(int, char **argv) {
 
       case 96: // JMP indirect
         PCL = val;
-        PCH = mem(addr_lo + 1, addr_hi);
+        PCH = mem(addr_lo + 1, addr_hi, 0, 0);
         cycles++;
 
       OP16(160) set_nz(Y = val); // LDY
@@ -518,11 +530,11 @@ int main(int, char **argv) {
           if (dot < 256 || dot > 319) {
             switch (dot & 7) {
             case 1: // Read nametable byte.
-              ntb = get_nametable_byte(V);
+              ntb = *get_nametable_byte(V);
               break;
             case 3: // Read attribute byte.
-              atb = (get_nametable_byte(
-                         (960 | V & 3072 | V >> 4 & 56 | V / 4 & 7)) >>
+              atb = (*get_nametable_byte(960 | V & 3072 | V >> 4 & 56 |
+                                         V / 4 & 7) >>
                      (V >> 5 & 2 | V / 2 & 1) * 2) &
                     3;
               atb |= atb * 4;
@@ -530,11 +542,11 @@ int main(int, char **argv) {
               atb |= atb << 8;
               break;
             case 5: // Read pattern table low byte.
-              ptb_lo = get_chr_byte(ppuctrl << 8 & 4096 | ntb << 4 | V >> 12);
+              ptb_lo = *get_chr_byte(ppuctrl << 8 & 4096 | ntb << 4 | V >> 12);
               break;
             case 7: // Read pattern table high byte.
               ptb_hi =
-                  get_chr_byte(ppuctrl << 8 & 4096 | ntb << 4 | V >> 12 | 8);
+                  *get_chr_byte(ppuctrl << 8 & 4096 | ntb << 4 | V >> 12 | 8);
               // Increment horizontal VRAM read address.
               V = (V & 31) == 31 ? V & ~31 ^ 1024 : V + 1;
               break;
@@ -567,8 +579,8 @@ int main(int, char **argv) {
                                                : (ppuctrl & 8) << 9 |
                                                      sprite_tile << 4 | sy & 7,
                              sprite_color =
-                                 get_chr_byte(sprite_addr + 8) >> sx << 1 & 2 |
-                                 get_chr_byte(sprite_addr) >> sx & 1;
+                                 *get_chr_byte(sprite_addr + 8) >> sx << 1 & 2 |
+                                 *get_chr_byte(sprite_addr) >> sx & 1;
                     // Only draw sprite if color is not 0 (transparent)
                     if (sprite_color) {
                       // Don't draw sprite if BG has priority.
