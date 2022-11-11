@@ -1,8 +1,5 @@
 #include <SDL2/SDL.h>
 #include <cstdint>
-#include <fcntl.h>
-#include <sys/mman.h>
-#include <unistd.h>
 
 #define PULL mem(++S, 1)
 #define PUSH(x) mem(S--, 1, x, 1);
