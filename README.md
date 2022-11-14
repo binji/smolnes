@@ -1,10 +1,10 @@
 # smolnes
 
-A NES emulator in ~5000 significant bytes of c++.
+A NES emulator in ~5000 significant bytes of c.
 
 ## Features
 
-Plays some mapper 0/1/2 games.
+Plays some mapper 0/1/2/3/7 games.
 
 ## Screenshots
 
