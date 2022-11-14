@@ -61,7 +61,7 @@ Keys:
 
 ## Updating keys
 
-Look for lines 23 and 24 in the source code. The following table shows which
+Look for line 21 in the source code. The following table shows which
 numbers map to which keyboard keys:
 
 | number | default key | gameboy button |
