@@ -203,7 +203,7 @@ uint8_t read_pc() {
 // Set N (negative) and Z (zero) flags of `P` register, based on `val`.
 uint8_t set_nz(uint8_t val) { return P = P & ~130 | val & 128 | !val * 2; }
 
-int main(int, char **argv) {
+int main(int argc, char **argv) {
   SDL_RWread(SDL_RWFromFile(argv[1], "rb"), rombuf, 1024 * 1024, 1);
   // Start PRG0 after 16-byte header.
   rom = rombuf + 16;

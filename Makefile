@@ -7,7 +7,6 @@ WARN=-Wall \
 		 -Wno-bool-operation \
 		 -Wno-discarded-qualifiers \
 		 -Wno-incompatible-pointer-types-discards-qualifiers \
-		 -Wno-c2x-extensions \
 		 -Wno-unknown-warning-option
 
 smolnes: smolnes.c
