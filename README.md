@@ -64,7 +64,7 @@ Keys:
 Look for line 21 in the source code. The following table shows which
 numbers map to which keyboard keys:
 
-| number | default key | gameboy button |
+| number | default key | NES button |
 | - | - | - |
 | 27 | X | A Button |
 | 29 | Z | B Button |
