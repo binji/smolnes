@@ -535,11 +535,8 @@ int main(int argc, char **argv) {
             case 3: // Read attribute byte.
               atb = (*get_nametable_byte(960 | V & 3072 | V >> 4 & 56 |
                                          V / 4 & 7) >>
-                     (V >> 5 & 2 | V / 2 & 1) * 2) &
-                    3;
-              atb |= atb * 4;
-              atb |= atb << 4;
-              atb |= atb << 8;
+                     (V >> 5 & 2 | V / 2 & 1) * 2) %
+                    4 * 0x5555;
               break;
             case 5: // Read pattern table low byte.
               ptb_lo = *get_chr_byte(ppuctrl << 8 & 4096 | ntb << 4 | V >> 12);
