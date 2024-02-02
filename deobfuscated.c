@@ -81,10 +81,10 @@ uint8_t mem(uint8_t lo, uint8_t hi, uint8_t val, uint8_t write) {
   uint16_t a = hi << 8 | lo;
 
   switch (hi >> 4) {
-  case 0 ... 1: // $0000...$1fff RAM
+  case 0: case 1: // $0000...$1fff RAM
     return write ? ram[a] = val : ram[a];
 
-  case 2 ... 3: // $2000..$2007 PPU (mirrored)
+  case 2: case 3: // $2000..$2007 PPU (mirrored)
     lo &= 7;
 
     // read/write $2007
@@ -145,10 +145,10 @@ uint8_t mem(uint8_t lo, uint8_t hi, uint8_t val, uint8_t write) {
                               : (tmp = keys & 1, keys /= 2, tmp)
                       : 0;
 
-  case 6 ... 7: // $6000...$7fff PRG RAM
+  case 6: case 7: // $6000...$7fff PRG RAM
     return write ? prgram[a & 8191] = val : prgram[a & 8191];
 
-  case 8 ... 15: // $8000...$ffff ROM
+  default: // $8000...$ffff ROM
     // handle mmc1 writes
     if (write)
       switch (rombuf[6] >> 4) {
