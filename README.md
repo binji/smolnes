@@ -8,6 +8,14 @@ Plays some mapper 0/1/2/3/4/7 games.
 
 ## Screenshots
 
+![Batman](img/batman.gif)
+![Kirby's Adventure](img/kirby.gif)
+![Mega Man 3](img/mm3.gif)
+![Little Nemo the Dream Master](img/nemo.gif)
+![River City Ransom](img/rcr.gif)
+![Super Mario Bros. 2](img/smb2.gif)
+![Super Mario Bros. 3](img/smb3.gif)
+![Teenage Mutant Ninja Turtles 2](img/tmnt2.gif)
 ![Bionic Commando](img/bc.gif)
 ![Donkey Kong](img/dk.gif)
 ![Dragon Warrior](img/dw.gif)
@@ -33,8 +41,7 @@ Plays some mapper 0/1/2/3/4/7 games.
 
 ## Building
 
-Probably only builds on Linux and macOS. Needs a compiler with the
-[case range extension](https://gcc.gnu.org/onlinedocs/gcc/Case-Ranges.html), so gcc or clang probably.
+Probably only builds on Linux and macOS. Try gcc or clang.
 
 ```
 $ make
