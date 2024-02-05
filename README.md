@@ -4,7 +4,7 @@ A NES emulator in ~5000 significant bytes of c.
 
 ## Features
 
-Plays some mapper 0/1/2/3/7 games.
+Plays some mapper 0/1/2/3/4/7 games.
 
 ## Screenshots
 
@@ -61,7 +61,7 @@ Keys:
 
 ## Updating keys
 
-Look for line 21 in the source code. The following table shows which
+Look for line 19 in the source code. The following table shows which
 numbers map to which keyboard keys:
 
 | number | default key | NES button |

@@ -7,7 +7,9 @@ WARN=-Wall \
 		 -Wno-bool-operation \
 		 -Wno-discarded-qualifiers \
 		 -Wno-incompatible-pointer-types-discards-qualifiers \
-		 -Wno-unknown-warning-option
+		 -Wno-unknown-warning-option \
+		 -Wno-switch-outside-range \
+		 -Wno-unused-value
 
 smolnes: smolnes.c
 	$(CC) -O2 -o $@ $< -lSDL2 -g ${WARN}
