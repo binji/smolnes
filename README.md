@@ -82,5 +82,5 @@ numbers map to which keyboard keys:
 | 81 | Arrow Down | DPAD Down |
 | 82 | Arrow Up | DPAD Up |
 
-Replace the numbers on this line with one from the [SDL scancode list](https://www.libsdl.org/tmp/SDL/include/SDL_scancode.h).
+Replace the numbers on this line with one from the [SDL scancode list](https://github.com/libsdl-org/SDL/blob/SDL2/include/SDL_scancode.h).
 
