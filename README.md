@@ -68,19 +68,20 @@ Keys:
 
 ## Updating keys
 
-Look for line 19 in the source code. The following table shows which
+Look for line 20 in the source code. The following table shows which
 numbers map to which keyboard keys:
 
-| number | default key | NES button |
-| - | - | - |
-| 27 | X | A Button |
-| 29 | Z | B Button |
-| 43 | Tab | Select Button |
-| 40 | Return | Start Button |
-| 79 | Arrow Right | DPAD Right |
-| 80 | Arrow Left | DPAD Left |
-| 81 | Arrow Down | DPAD Down |
-| 82 | Arrow Up | DPAD Up |
+| character | number | default key | NES button |
+| - | - | - | - |
+| \33 | 27 | X | A Button |
+| \35 | 29 | Z | B Button |
+| + | 43 | Tab | Select Button |
+| ( | 40 | Return | Start Button |
+| R | 82 | Arrow Up | DPAD Up |
+| Q | 81 | Arrow Down | DPAD Down |
+| P | 80 | Arrow Left | DPAD Left |
+| O | 79 | Arrow Right | DPAD Right |
 
-Replace the numbers on this line with one from the [SDL scancode list](https://github.com/libsdl-org/SDL/blob/SDL2/include/SDL_scancode.h).
-
+1. Look up the keys you want to replace from this list [SDL scancode list](https://github.com/libsdl-org/SDL/blob/SDL2/include/SDL_scancode.h)
+1. Convert the number to its ascii character, or C character literal.
+1. Replace this character in the string.

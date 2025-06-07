@@ -1,7 +1,8 @@
 .PHONY: all clean
 all: smolnes deobfuscated
 
-WARN=-Wall \
+WARN=-std=c99 \
+		 -Wall \
      -Wno-parentheses \
 		 -Wno-misleading-indentation \
 		 -Wno-bool-operation \
@@ -9,7 +10,9 @@ WARN=-Wall \
 		 -Wno-incompatible-pointer-types-discards-qualifiers \
 		 -Wno-unknown-warning-option \
 		 -Wno-switch-outside-range \
-		 -Wno-unused-value
+		 -Wno-unused-value \
+		 -Wno-char-subscripts \
+		 -Wno-switch
 
 smolnes: smolnes.c
 	$(CC) -O2 -o $@ $< -lSDL2 -g ${WARN}
