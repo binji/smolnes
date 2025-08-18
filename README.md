@@ -85,3 +85,14 @@ numbers map to which keyboard keys:
 1. Look up the keys you want to replace from this list [SDL scancode list](https://github.com/libsdl-org/SDL/blob/SDL2/include/SDL_scancode.h)
 1. Convert the number to its ascii character, or C character literal.
 1. Replace this character in the string.
+
+## Projects using smolnes
+
+* [p2r3/smolnes-nut](https://github.com/p2r3/smolnes-nut) The smolnes emulator
+  ported to Squirrel for Portal 2 - https://youtu.be/PUTRvF7slYs
+* [nevesnunes/ghidra-plays-mario](https://github.com/nevesnunes/ghidra-plays-mario)
+  Playing NES ROMs with Ghidra's PCode Emulator
+* [sysprog21/rv32emu](https://github.com/sysprog21/rv32emu) Compact and
+  Efficient RISC-V RV32I[MAFC] emulator (uses smolnes as a demo)
+
+Let me know if you've used smolnes and I'll add it to the list.
