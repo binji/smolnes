@@ -61,7 +61,13 @@ jobs:
       POWERSHELL_TELEMETRY_OPTOUT: 1
     steps:
       - uses: actions/checkout@v3
+        with:
+          submodules: recursive
       - uses: ilammy/msvc-dev-cmd@v1
+      - name: Initialize and update submodules
+        run: |
+          git submodule init
+          git submodule update --recursive
       - name: Generate project
         run: cmake -B build
       - name: Build
