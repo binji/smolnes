@@ -1,5 +1,4 @@
 .PHONY: all clean
-all: smolnes deobfuscated
 
 WARN=-std=c99 \
 		 -Wall \
@@ -14,11 +13,27 @@ WARN=-std=c99 \
 		 -Wno-char-subscripts \
 		 -Wno-switch
 
-smolnes: smolnes.c
-	$(CC) -O2 -o $@ $< -lSDL2 -g ${WARN}
+LDFLAGS = -shared -lgdi32 -luser32
 
-deobfuscated: deobfuscated.c
-	$(CC) -O2 -o $@ $< -lSDL2 -g ${WARN}
+OBJS = minifb.o nes_apu.o nes_dmc.o common.o
+
+all: in_nes.dll
+
+in_nes.dll: src/plugin.c $(OBJS)
+	i686-w64-mingw32-c++ -g3 -O3 $(CFLAGS) -o $@ $^ $(LDFLAGS) -static
+	cp in_nes.dll "/home/erisl/.wine/drive_c/Program Files (x86)/Winamp5666/Plugins/in_nes.dll"
+
+minifb.o: src/WinMiniFB.c
+	i686-w64-mingw32-c++ -g3 -O3 $(CFLAGS) -c -o $@ $< -static
+
+nes_apu.o: nes_nsfplay/nes_apu.cpp
+	i686-w64-mingw32-c++ -g3 -O3 $(CFLAGS) -c -o $@ $< -static
+
+nes_dmc.o: nes_nsfplay/nes_dmc.cpp
+	i686-w64-mingw32-c++ -g3 -O3 $(CFLAGS) -c -o $@ $< -static
+
+common.o: nes_nsfplay/common.cpp
+	i686-w64-mingw32-c++ -g3 -O3 $(CFLAGS) -c -o $@ $< -static
 
 clean:
-	rm -f smolnes deobfuscated
+	rm -f in_nes.dll $(OBJS)

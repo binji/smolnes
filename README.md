@@ -57,18 +57,18 @@ Keys:
 
 | Action | Key |
 | --- | --- |
-| DPAD-UP | <kbd>↑</kbd> |
-| DPAD-DOWN | <kbd>↓</kbd> |
-| DPAD-LEFT | <kbd>←</kbd> |
-| DPAD-RIGHT | <kbd>→</kbd> |
-| B | <kbd>Z</kbd> |
-| A | <kbd>X</kbd> |
-| START | <kbd>Enter</kbd> |
-| SELECT | <kbd>Tab</kbd> |
+| DPAD-UP | <kbd>W</kbd> |
+| DPAD-DOWN | <kbd>S</kbd> |
+| DPAD-LEFT | <kbd>A</kbd> |
+| DPAD-RIGHT | <kbd>D</kbd> |
+| B | <kbd>→</kbd> |
+| A | <kbd>Numpad 0</kbd> |
+| START | <kbd>G</kbd> |
+| SELECT | <kbd>J</kbd> |
 
 ## Updating keys
 
-Look for line 20 in the source code. The following table shows which
+Look for line 493 in the source code. The following table shows which
 numbers map to which keyboard keys:
 
 | character | number | default key | NES button |
