@@ -132,7 +132,10 @@ uint8_t *rom, *chrrom,                // Points to the start of PRG/CHR ROM
     tri[3],
     noi[3],
     dmc[8],*/
-    smbtmr[3];
+    smbtmr[3],
+    smbltmr[3],
+    last_world,
+    last_level;
 
 uint16_t scany,          // Scanline Y
     T, V,                // "Loopy" PPU registers
@@ -146,8 +149,15 @@ uint16_t scany,          // Scanline Y
 
 int shift_at = 0;
 
+HWND hwnd_winamp = FindWindow("Winamp v1.x",NULL);
+
 int init()
 {
+  // i hate llama group and i am not gonna make it a secret
+  if (SendMessage(hwnd_winamp,WM_WA_IPC,0,IPC_GETVERSION) > 0x5066){
+    MessageBoxW(hwnd_winamp, L"llama group versions of winamp are not supported\ngo back to 5.666", L"FUCKO!!!!!", MB_OK);
+    ExitProcess(0);
+  }
   // yeah sure fuck you it works here i guess
   // and not when i start play()
   key_state = (uint8_t*) mfb_keystatus();
@@ -288,7 +298,6 @@ static int Thread(void* arg) {
 
     if(mod.outMod->CanWrite() >= (packet_size<<(mod.dsp_isactive()?1:0)))
     {
-
       // fill buffer with emulator audio
       short* s = packet_buf;
       for (int i = 0; i < packet_samples; i++) {
@@ -356,6 +365,8 @@ uint8_t *get_nametable_byte(uint16_t a) {
 }
 
 int dead = 0;
+bool length_determiner = false;
+bool in_game = false;
 
 // If `write` is non-zero, writes `val` to the address `hi:lo`, otherwise reads
 // a value from the address `hi:lo`.
@@ -377,6 +388,7 @@ uint8_t mem(uint8_t lo, uint8_t hi, uint8_t val, uint8_t write) {
   if (addr == 0x000E && val == 0x06){
     //sprintf(str, "player state read/write at %04X val=%02X\n", addr, val);
     //OutputDebugString(str);
+    memcpy(smbtmr, smbltmr, sizeof(smbtmr));
     dead = 0;
   } else if (addr == 0x000E && val == 0x0B) {
     //sprintf(str, "player state read/write at %04X val=%02X\n", addr, val);
@@ -404,6 +416,49 @@ uint8_t mem(uint8_t lo, uint8_t hi, uint8_t val, uint8_t write) {
     //sprintf(str, "Timer digit read/write at %04X val=%02X\n", addr, val);
     //OutputDebugString(str);
   }
+
+    // $0770: level state (00 = title, 01 = in game, 02 = victory, 03 = game over)
+    if (addr == 0x0770 && write) {
+        if (val == 0x01) {
+            in_game = true;
+        } else {
+            in_game = false;
+            length_determiner = false;  // reset when leaving game
+            smbtmr[0] = 0; smbtmr[1] = 0; smbtmr[2] = 0;
+            smbltmr[0] = 0; smbltmr[1] = 0; smbltmr[2] = 0;
+        }
+    }
+
+    // $0766/$075F: world number
+    if ((addr == 0x0766 && write) || (addr == 0x075F && write)) {
+      //sprintf(str, "world at %04X val=%02X\n", addr, val);
+        if (val != last_world) {
+            last_world = val;
+            length_determiner = false;  // new world -> allow recapture
+        }
+    }
+
+    // $0767/$0760: level number
+    if ((addr == 0x0767 && write) || (addr == 0x0760 && write)) {
+      //sprintf(str, "level at %04X val=%02X\n", addr, val);
+        if (val != last_level) {
+            last_level = val;
+            length_determiner = false;
+        }
+    }
+
+    // $000E: player state
+    if (addr == 0x000E && write) {
+        if (in_game && !length_determiner) {
+            if (val == 0x08 || val == 0x07) {
+                // copy stored time into smbltmr once
+                for (int i = 0; i < 3; i++) {
+                    smbltmr[i] = smbtmr[i];
+                }
+                length_determiner = true;
+            }
+        }
+    }
 
   xgm::nes1_NP->Write(addr,val);
   xgm::nes2_NP->Write(addr,val);
@@ -1115,10 +1170,8 @@ void stop() {
 
 int getlength()
 {
-  /* char str[40];
-   * sprintf(str, "getlength (%d)\n", in_wad_partime);
-   * OutputDebugString(str); */
-  return 400000; // FIXME: not true
+  int timer_val = smbltmr[0] * 100 + smbltmr[1] * 10 + smbltmr[2];
+  return timer_val * 1000;
 }
 
 int getoutputtime()
@@ -1126,8 +1179,7 @@ int getoutputtime()
   // rebuild decimal value from SMB timer digits ($07F8–$07FA)
   int timer_val = smbtmr[0] * 100 + smbtmr[1] * 10 + smbtmr[2];
 
-  // FIXME: 400 isnt true
-  int elapsed_sec = 400 - timer_val;
+  int elapsed_sec = (smbltmr[0] * 100 + smbltmr[1] * 10 + smbltmr[2]) - timer_val;
 
   // return ms
   return elapsed_sec * 1000;
@@ -1135,6 +1187,7 @@ int getoutputtime()
 
 void setoutputtime(int time_in_ms)
 {
+  // what am i meant to be doing here?
   #ifdef DEBUG_CONSOLE
   char str[40];
   sprintf(str, "setoutputtime (%d)\n", time_in_ms);
@@ -1161,12 +1214,14 @@ void getfileinfo(const char* filename, char* title, int* length_in_ms)
   //char str2[40];
   //sprintf(str2, "title (%d)\n", title);
   //OutputDebugString(str2);
+
+  // change at some point
   strcpy(title, "smolnes");
 }
 
 void eq_set(int on, char data[10], int preamp)
 {
-  // No EQ support
+  // what am i meant to be doing here?
 }
 
 int infoBox(const char* file, HWND hwndParent) {
