@@ -219,6 +219,7 @@ int play(const char* fn) {
   mod.SetInfo(bitrate, srate, stereo, synced);
   mod.SAVSAInit(0, 44100);
   mod.VSASetInfo(44100, 2);
+  mod.outMod->SetVolume(-666);
 
   if (mod.outMod && mod.outMod->Open) {
     int maxlat = mod.outMod->Open(44100, 2, 16, -1, -1);
@@ -644,7 +645,7 @@ void wa_main(int argc, char **argv) {
   PCL = mem(~3, ~0, 0, 0);
   PC_HI = mem(~2, ~0, 0, 0);
 
-  if (!mfb_open("smolnes", 256, 224, 4)) {}
+  if (!mfb_open("smolnes", 256, 224, 3)) {}
     //return 0;
   // Create window 1024x840. The framebuffer is 256x240, but we don't draw the
   // top or bottom 8 rows. Scaling up by 4x gives 1024x960, but that looks
