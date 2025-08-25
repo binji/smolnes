@@ -5,8 +5,8 @@
 extern "C" {
 #endif
 
-    #include "../thirdparty/wacup/in2.h" // wacup input plugin api
-    #include "../thirdparty/wacup/wa_ipc.h" // wacup ipc api
+#include "../thirdparty/wacup/in2.h" // wacup input plugin api
+#include "../thirdparty/wacup/wa_ipc.h" // wacup ipc api
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
