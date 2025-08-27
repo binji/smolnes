@@ -164,9 +164,9 @@ int init()
   key_state = (uint8_t*) mfb_keystatus();
 
   xgm::nes1_NP=new xgm::NES_APU;
-  xgm::nes1_NP->SetOption(xgm::NES_APU::OPT_NONLINEAR_MIXER,1);
+  xgm::nes1_NP->SetOption(xgm::NES_APU::OPT_NONLINEAR_MIXER,0);
   xgm::nes2_NP=new xgm::NES_DMC;
-  xgm::nes2_NP->SetOption(xgm::NES_DMC::OPT_NONLINEAR_MIXER,1);
+  xgm::nes2_NP->SetOption(xgm::NES_DMC::OPT_NONLINEAR_MIXER,0);
   xgm::nes2_NP->SetAPU(xgm::nes1_NP);
   /* for (int i = 0x4000; i < 0x4017; i++){
     xgm::nes1_NP->Write(i,0x00);
@@ -207,6 +207,7 @@ const int sample_rate = 44100;
 double cycles_per_sample = xgm::DEFAULT_CLOCK / (double)sample_rate;
 
 int play(const char* fn) {
+  int maxlatency;
   strcpy(lastfn, fn);
   done = false;
 
@@ -214,19 +215,22 @@ int play(const char* fn) {
   char* filename_copy = _strdup(fn);
 
   wapaused = 0;
-  memset(sample_buffer, 0, sizeof(sample_buffer));
+
+  maxlatency = mod.outMod->Open(44100,2,16, -1,-1);
+	if(maxlatency < 0) return 1;
+
+  char str[40];
+  sprintf(str, "maxlatency (%d)\n", maxlatency);
+  OutputDebugString(str);
 
   mod.SetInfo(bitrate, srate, stereo, synced);
+  //mod.SAVSAInit(maxlatency, 44100);
+  // where we're going, we don't need maxlatency
+  // you cant see into the future in an NES emulator anyway
   mod.SAVSAInit(0, 44100);
   mod.VSASetInfo(44100, 2);
   mod.outMod->SetVolume(-666);
-
-  if (mod.outMod && mod.outMod->Open) {
-    int maxlat = mod.outMod->Open(44100, 2, 16, -1, -1);
-  } else {
-    free(filename_copy);
-    return -1;
-  }
+  mod.outMod->Flush(0);
 
   xgm::nes1_NP->Reset();
   xgm::nes2_NP->Reset();
@@ -292,12 +296,6 @@ static int Thread(void* arg) {
   apu_clock_rest = 0.0;
 
   while (!done) {
-    // enough space to push one full buffer?
-    /*if (mod.outMod->CanWrite() <= (frames_per_buffer * frameSize)) {
-      SleepEx(10, TRUE);
-      continue;
-    }*/
-
     if(mod.outMod->CanWrite() >= (packet_size<<(mod.dsp_isactive()?1:0)))
     {
       // fill buffer with emulator audio
@@ -322,7 +320,8 @@ static int Thread(void* arg) {
         // also comes with very crude centering because of the DMC creating a DC offset
         // doesnt address the triangle channel going all wonky though
         const int SCALE = 8;
-        int left  = ((apu1[0] + apu2[0] - (xgm::nes2_NP->out[2] * (SCALE) * 5)) * SCALE) - 15384;
+        int left  = (((apu1[0]/24) + apu2[0] - (xgm::nes2_NP->out[2] * (SCALE) * 5)) * SCALE) - 5800;
+        //int left = ((xgm::nes2_NP->out[0] * (SCALE) * 5)) * SCALE;
         int right = left;
 
         if (left > 32767) left = 32767;
@@ -341,15 +340,19 @@ static int Thread(void* arg) {
 
       // timestamp for vis / SA / VSA
       int timestamp = mod.outMod->GetWrittenTime();
+      /* char str[40];
+      sprintf(str, "setoutputtime (%d)\n", timestamp);
+      OutputDebugString(str); */
       mod.SAAddPCMData((char*)packet_buf, channels, 16, timestamp);
       mod.VSAAddPCMData((char*)packet_buf, channels, 16, timestamp);
 
       // write to output
       mod.outMod->Write((char*)packet_buf, wsize);
     }
+    else Sleep(33);
   }
 
-  if (mod.outMod) mod.outMod->Close();
+  mod.outMod->Close();
   mfb_close();
   return 0;
 }

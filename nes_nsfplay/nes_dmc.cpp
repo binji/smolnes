@@ -153,6 +153,7 @@ namespace xgm
 
   }
 
+  unsigned int ret = 8;
   // 三角波チャンネルの計算 戻り値は0-15
   unsigned int NES_DMC::calc_tri (unsigned int clocks)
   {
@@ -175,7 +176,17 @@ namespace xgm
       }
     }
 
-    unsigned int ret = tritbl[tphase];
+    // this is wholly inaccurate, but i want to prevent the triangle from bouncing around all over the place
+    // can be seen as a very crude highpass filter
+    // unfortunately the triangle now makes popping sounds when starting and stopping
+    if (!(linear_counter > 0 && length_counter[0] > 0
+      && (!option[OPT_TRI_MUTE] || tri_freq > 0))) {
+        // hold the last value of the triangle channel
+        ret = tritbl[8];
+    } else {
+        ret = tritbl[tphase];
+    }
+
     return ret;
   }
 

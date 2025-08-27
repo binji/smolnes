@@ -165,8 +165,15 @@ namespace xgm
     }
     else
     {
-        m[0] = (out[0] * square_linear) / 15;
-        m[1] = (out[1] * square_linear) / 15;
+        // this is the stuff of nightmares
+        m[0] = (out[0] * square_linear) != 0 
+         ? (out[0] * square_linear) 
+         : (-(envelope_disable[0] ? volume[0] : envelope_counter[0]) * 16384) / 15;
+
+        m[1] = (out[1] * square_linear) != 0 
+         ? (out[1] * square_linear) 
+         : (-(envelope_disable[1] ? volume[1] : envelope_counter[1]) * 16384) / 15;
+
     }
 
     b[0]  = m[0] * sm[0][0];
