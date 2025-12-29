@@ -259,7 +259,7 @@ int main(int argc, char **argv) {
   // 8k CHR banks. If it is zero, assume the game uses CHR RAM.
   chrrom = rombuf[5] ? rom + ((prg[1] + 1) << 14) : chrram;
   // CHR1 is the last 4k bank.
-  chr[1] = (rombuf[5] || 1) * 2 - 1;
+  chr[1] = 1;
   // Bit 0 of `rombuf[6]` is 0=>horizontal mirroring, 1=>vertical mirroring.
   mirror = 3 - rombuf[6] % 2;
   if (rombuf[6] / 16 == 4) {
