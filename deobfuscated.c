@@ -257,9 +257,9 @@ int main(int argc, char **argv) {
   prg[1] = rombuf[4] - 1;
   // CHR0 ROM is after all PRG data in the file. `rombuf[5]` is the number of
   // 8k CHR banks. If it is zero, assume the game uses CHR RAM.
-  chrrom = rombuf[5] ? rom + ((prg[1] + 1) << 14) : chrram;
+  chrrom = rombuf[5] ? rom + (rombuf[4] << 14) : chrram;
   // CHR1 is the last 4k bank.
-  chr[1] = (rombuf[5] || 1) * 2 - 1;
+  chr[1] = rombuf[5] ? rombuf[5] * 2 - 1 : 1;
   // Bit 0 of `rombuf[6]` is 0=>horizontal mirroring, 1=>vertical mirroring.
   mirror = 3 - rombuf[6] % 2;
   if (rombuf[6] / 16 == 4) {

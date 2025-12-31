@@ -24,7 +24,7 @@ l%2)|l%2  ,M[4+l-t]=S[2+l];K[t=MB/32&2]=S[6];K[1]=S[7];K[2-t]=(K[3]=b[4]*2-1)-1;
 5,*M=c0&  ~!(I&16),M[1]=I&16?c1:c0|1,t=I/4%4-2,*K=!                                       t?0:t^1?J&~1:J,K[1]=!t?J:t^1?J|1:b[4]-1:0;}Q+E[(K  [h-8>>e
 -12]&(b[  4]<<14-e)-1)<<e|a%(1<<e)];}Q~0;}u R(){v=m(l,h);!++l&&++h;Q+v;}u n(u v){Q P=P&125|v&128|!v*2;}int main(int w,char**av){SDL_RWread(  SDL_RW\
 FromFile  (av[1],"rb"),b,_*_,1);SDL_Init(32);void*re=SDL_CreateRenderer(SDL_CreateWindow("smolnes",0,0,_,840,4),-1,4),*tx=SDL_CreateTexture  (re,35\
-7896194,  1,256,224);             E=b+16;K[1]=(t=b[                                       4])-1;C=b[5]?E+(t<<14):cr;M[1]=(b[5]||1)*2-1;D=3-  b[6]%2;
+7896194,  1,256,224);             E=b+16;K[1]=(t=b[                                       4])-1;C=(h=b[5])?E+(t<<14):cr;M[1]=h?h*2-1:1;D=3-  b[6]%2;
 k(4==b[6  ]/16)mm(0,+  128,0,1),  Mb-=2,e--;l=m(~3,                                       ~0);h=m(~2,~0);w=0;kb=SDL_GetKeyboardState(0);Y:c  =L=0;k(
 N)G N;Z(  f=31&(o=R()  )){W+0:k(  o&128){R();L=1;G n;}Z(o>>5){W+0:!++l&&++h;N:g(h)g(l)g(P|32)l=m(N=~1-(N&4),~0);h=m(N+1,~0);N=0;c++;W+1:r=R  ();g(h)
 g(l)h=R(  );l=r;W+2:P  =z&~32;l=  z;h=z;W+3:l=z;h=z;!++l&&++h;}c+=4;W+16:R();k(!(P&bm[o>>6])^o/32&1)r=l+(int8_t)v>>8,h+=r,l+=v,c+=r?2:1;W-1  :x(8,24
