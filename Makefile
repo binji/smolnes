@@ -13,12 +13,13 @@ WARN=-std=c99 \
 		 -Wno-unused-value \
 		 -Wno-char-subscripts \
 		 -Wno-switch
+SDLFLAGS=$(shell pkg-config --cflags --libs sdl2)
 
 smolnes: smolnes.c
-	$(CC) -O2 -o $@ $< -lSDL2 -g ${WARN}
+	$(CC) -O2 -o $@ $< ${SDLFLAGS} -g ${WARN}
 
 deobfuscated: deobfuscated.c
-	$(CC) -O2 -o $@ $< -lSDL2 -g ${WARN}
+	$(CC) -O2 -o $@ $< ${SDLFLAGS} -g ${WARN}
 
 clean:
 	rm -f smolnes deobfuscated
