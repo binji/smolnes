@@ -94,5 +94,8 @@ numbers map to which keyboard keys:
   Playing NES ROMs with Ghidra's PCode Emulator
 * [sysprog21/rv32emu](https://github.com/sysprog21/rv32emu) Compact and
   Efficient RISC-V RV32I[MAFC] emulator (uses smolnes as a demo)
+* [ma.tthias.xyz/en/blog/smolnes-vuln-research/](https://ma.tthias.xyz/en/blog/smolnes-vuln-research/)
+  Vulnerability Research on SmolNES
+  
 
 Let me know if you've used smolnes and I'll add it to the list.
